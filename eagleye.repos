@@ -9,7 +9,7 @@ repositories:
     version: ros2
   nmea_ros_bridge:
     type: git
-    url: https://github.com/MapIV/nmea_ros_bridge.git
+    url: https://github.com/LMA-FEM-UNICAMP/nmea_ros_bridge
     version: ros2-v0.1.0
   gnss_compass_ros:
     type: git
