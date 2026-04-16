@@ -115,8 +115,8 @@ private:
     std::stringstream body;
     body << "GPGGA," << time_ss.str() << "," << lat_str << "," << lat_dir << "," << lon_str << "," << lon_dir << ","
          << has_fix_ << "," << num_satellites << "," << std::fixed << std::setprecision(1) << hdop << "," << std::fixed
-         << std::setprecision(1) << alt_ << ",M,"
-         << "0.0,M,"  // TODO geoid separation (unknown → 0)
+         << std::setprecision(1) << alt_ + 22.0 << ",M," // ! + 22 because of Campoinas geoid
+         << "-22.0,M,"  // ! geoid separation (Campinas → -22.0)
          << ","       // DGPS age
          << "";       // DGPS station ID
 
