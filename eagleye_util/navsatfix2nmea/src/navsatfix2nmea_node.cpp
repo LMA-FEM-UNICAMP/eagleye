@@ -12,24 +12,18 @@
 #include <iomanip>
 #include <chrono>
 
-// UDP
-#include <fcntl.h>
 #include <unistd.h>
-#include <stdexcept>
+#include <arpa/inet.h>
 
 #define RAD2DEG(x) ((x) * 180.0 / M_PI)
+#define PORT 5000
+#define BACKLOG 1
 
 class NMEAUdpPublisher : public rclcpp::Node
 {
 public:
   NMEAUdpPublisher()
-    : Node("nmea_udp_publisher")
-    , lat_(0.0)
-    , lon_(0.0)
-    , heading_deg_(0.0)
-    , vel_(0.0)
-    , alt_(0.0)
-    , has_fix_(false)
+    : Node("nmea_udp_publisher"), lat_(0.0), lon_(0.0), heading_deg_(0.0), vel_(0.0), alt_(0.0), has_fix_(false)
   {
     gps_sub_ = this->create_subscription<geographic_msgs::msg::GeoPoseWithCovarianceStamped>(
         "/eagleye/geo_pose_with_covariance", 10,
@@ -37,10 +31,41 @@ public:
 
     vel_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
         "/eagleye/vehicle/twist", 10, std::bind(&NMEAUdpPublisher::velCallback, this, std::placeholders::_1));
+
+    // TCP socket
+    addrlen_ = sizeof(address_);
+    server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd_ == 0)
+    {
+      perror("socket failed");
+    }
+
+    int opt = 1;
+    setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    address_.sin_family = AF_INET;
+    address_.sin_addr.s_addr = INADDR_ANY;
+    address_.sin_port = htons(PORT);
+
+    // Bind
+    if (bind(server_fd_, (struct sockaddr*)&address_, sizeof(address_)) < 0)
+    {
+      perror("bind failed");
+    }
+
+    // Wait to connect to gpsd
+    RCLCPP_WARN(this->get_logger(), "Waiting gps at IP: XXX and PORT: XXX"); // TODO: Parameter-based IP and PORT
+    if (listen(server_fd_, BACKLOG) < 0)
+    {
+      perror("listen");
+    }
+
+    connectGpsD();
   }
 
   ~NMEAUdpPublisher()
   {
+    close(client_fd_);
   }
 
 private:
@@ -115,10 +140,10 @@ private:
     std::stringstream body;
     body << "GPGGA," << time_ss.str() << "," << lat_str << "," << lat_dir << "," << lon_str << "," << lon_dir << ","
          << has_fix_ << "," << num_satellites << "," << std::fixed << std::setprecision(1) << hdop << "," << std::fixed
-         << std::setprecision(1) << alt_ + 22.0 << ",M," // ! + 22 because of Campoinas geoid
-         << "-22.0,M,"  // ! geoid separation (Campinas → -22.0)
-         << ","       // DGPS age
-         << "";       // DGPS station ID
+         << std::setprecision(1) << alt_ + 22.0 << ",M,"  // ! + 22 because of Campoinas geoid
+         << "-22.0,M,"                                    // ! geoid separation (Campinas → -22.0)
+         << ","                                           // DGPS age
+         << "";                                           // DGPS station ID
 
     std::string sentence_body = body.str();
     std::string checksum = getChecksum(sentence_body);
@@ -153,12 +178,43 @@ private:
     std::string full = "$" + body_str + "*" + getChecksum(body_str) + "\r\n";
     std::string gpgga = navSatFixToGPGGA();
 
-    // TODO Send
-    // send(full);
-    // send(gpgga);
+    send_all(client_fd_, full);
+    send_all(client_fd_, gpgga);
 
+    /// Printing...
+    full.resize(full.size() - 2);
+    gpgga.resize(gpgga.size() - 2);
     RCLCPP_INFO(this->get_logger(), "%s", full.c_str());
     RCLCPP_INFO(this->get_logger(), "%s", gpgga.c_str());
+  }
+
+  // Publish NMEA
+
+  bool send_all(int sock, const std::string& data)
+  {
+    size_t total_sent = 0;
+    size_t length = data.size();
+
+    while (total_sent < length)
+    {
+      ssize_t sent = send(sock, data.c_str() + total_sent, length - total_sent, 0);
+      if (sent <= 0)
+      {
+        return false;
+      }
+      total_sent += sent;
+    }
+    return true;
+  }
+
+  void connectGpsD()
+  {
+    client_fd_ = accept(server_fd_, (struct sockaddr*)&address_, &addrlen_);
+    if (client_fd_ < 0)
+    {
+      perror("accept");
+    }
+    RCLCPP_INFO(this->get_logger(), "gpsd connected.");
   }
 
   // ---------------- Members ----------------
@@ -171,7 +227,13 @@ private:
   double vel_;
   bool has_fix_;
   uint16_t sec_;
-  
+
+  // TCP socket
+  int server_fd_, client_fd_;
+  struct sockaddr_in address_
+  {
+  };
+  socklen_t addrlen_;
 };
 
 // ---------------- Main ----------------
