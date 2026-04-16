@@ -18,7 +18,7 @@
     <param name="parent_frame_id" value="map"/>
     <param name="child_frame_id" value="eagleye_base_link"/>
     <param name="base_link_frame_id" value="base_link"/>
-    <param name="gnss_frame_id" value="gnss_link"/>
+    <param name="gnss_frame_id" value="gnss"/>
   </node>
 
 </launch>

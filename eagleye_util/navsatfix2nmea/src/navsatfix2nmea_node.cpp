@@ -1,73 +1,65 @@
 #include <rclcpp/rclcpp.hpp>
 
-#include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <geographic_msgs/msg/geo_pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/utils.h>
 
 #include <cmath>
 #include <sstream>
+#include <string>
 #include <iomanip>
 #include <chrono>
 
 // UDP
-#include <sys/socket.h>
-#include <arpa/inet.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <stdexcept>
+
+#define RAD2DEG(x) ((x) * 180.0 / M_PI)
 
 class NMEAUdpPublisher : public rclcpp::Node
 {
 public:
-  NMEAUdpPublisher() : Node("nmea_udp_publisher"), lat_(0.0), lon_(0.0), heading_deg_(0.0), has_fix_(false)
+  NMEAUdpPublisher()
+    : Node("nmea_udp_publisher")
+    , lat_(0.0)
+    , lon_(0.0)
+    , heading_deg_(0.0)
+    , vel_(0.0)
+    , alt_(0.0)
+    , has_fix_(false)
   {
-    // Parameters
-    this->declare_parameter<std::string>("obu_ip", "127.0.0.1");
-    this->declare_parameter<int>("filtered_gnss_port", 5000);
-
-    udp_ip_ = this->get_parameter("obu_ip").as_string();
-    udp_port_ = this->get_parameter("filtered_gnss_port").as_int();
-
-    setupUdp();
-
     gps_sub_ = this->create_subscription<geographic_msgs::msg::GeoPoseWithCovarianceStamped>(
-        "/eagleye/gnss/fix", 10, std::bind(&NMEAUdpPublisher::gpsCallback, this, std::placeholders::_1));
+        "/eagleye/geo_pose_with_covariance", 10,
+        std::bind(&NMEAUdpPublisher::gpsCallback, this, std::placeholders::_1));
+
+    vel_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
+        "/eagleye/vehicle/twist", 10, std::bind(&NMEAUdpPublisher::velCallback, this, std::placeholders::_1));
   }
 
   ~NMEAUdpPublisher()
   {
-    close(sock_);
   }
 
 private:
-  // ---------------- UDP ----------------
-
-  void setupUdp()
-  {
-    sock_ = socket(AF_INET, SOCK_DGRAM, 0);
-
-    if (sock_ < 0)
-    {
-      RCLCPP_FATAL(this->get_logger(), "Failed to create UDP socket");
-      rclcpp::shutdown();
-    }
-
-    servaddr_.sin_family = AF_INET;
-    servaddr_.sin_port = htons(udp_port_);
-    servaddr_.sin_addr.s_addr = inet_addr(udp_ip_.c_str());
-
-    RCLCPP_INFO(this->get_logger(), "UDP target: %s:%d", udp_ip_.c_str(), udp_port_);
-  }
-
-  void sendUdp(const std::string& msg)
-  {
-    sendto(sock_, msg.c_str(), msg.size(), 0, (const struct sockaddr*)&servaddr_, sizeof(servaddr_));
-  }
-
   // ---------------- Callbacks ----------------
+
+  void velCallback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
+  {
+    vel_ = msg->twist.linear.x / 0.514444;
+  }
 
   void gpsCallback(const geographic_msgs::msg::GeoPoseWithCovarianceStamped::SharedPtr msg)
   {
     lat_ = msg->pose.pose.position.latitude;
     lon_ = msg->pose.pose.position.longitude;
     has_fix_ = true;
+    sec_ = msg->header.stamp.sec;
+    alt_ = msg->pose.pose.position.longitude;
+
+    heading_deg_ = RAD2DEG(tf2::getYaw(msg->pose.pose.orientation));
 
     publishNMEA();
   }
@@ -94,7 +86,7 @@ private:
     return { oss.str(), dir };
   }
 
-  std::string checksum(const std::string& s)
+  std::string getChecksum(const std::string& s)
   {
     uint8_t cs = 0;
     for (auto c : s)
@@ -104,6 +96,34 @@ private:
     oss << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(cs);
 
     return oss.str();
+  }
+
+  std::string navSatFixToGPGGA(int num_satellites = 8, double hdop = 0.9)
+  {
+    std::time_t t = sec_;
+    std::tm* gmt = std::gmtime(&t);
+
+    std::stringstream time_ss;
+    time_ss << std::setfill('0') << std::setw(2) << gmt->tm_hour << std::setw(2) << gmt->tm_min << std::setw(2)
+            << gmt->tm_sec;
+
+    // Latitude / Longitude
+    auto [lat_str, lat_dir] = degToNMEA(lat_, true);
+    auto [lon_str, lon_dir] = degToNMEA(lon_, false);
+
+    // Build sentence (without $ and checksum)
+    std::stringstream body;
+    body << "GPGGA," << time_ss.str() << "," << lat_str << "," << lat_dir << "," << lon_str << "," << lon_dir << ","
+         << has_fix_ << "," << num_satellites << "," << std::fixed << std::setprecision(1) << hdop << "," << std::fixed
+         << std::setprecision(1) << alt_ << ",M,"
+         << "0.0,M,"  // TODO geoid separation (unknown → 0)
+         << ","       // DGPS age
+         << "";       // DGPS station ID
+
+    std::string sentence_body = body.str();
+    std::string checksum = getChecksum(sentence_body);
+
+    return "$" + sentence_body + "*" + checksum + "\r\n";
   }
 
   void publishNMEA()
@@ -126,31 +146,32 @@ private:
 
     std::ostringstream body;
     body << "GPRMC," << time_str << ".00,A," << lat_str << "," << lat_dir << "," << lon_str << "," << lon_dir << ","
-         << "0.00,"  // speed
-         << std::fixed << std::setprecision(2) << heading_deg_ << "," << date_str << ",,,A";
+         << std::fixed << std::setprecision(2) << vel_ << ","  // speed
+         << heading_deg_ << "," << date_str << ",,,A";
 
     std::string body_str = body.str();
-    std::string full = "$" + body_str + "*" + checksum(body_str) + "\r\n";
+    std::string full = "$" + body_str + "*" + getChecksum(body_str) + "\r\n";
+    std::string gpgga = navSatFixToGPGGA();
 
-    // Send UDP
-    sendUdp(full);
+    // TODO Send
+    // send(full);
+    // send(gpgga);
 
     RCLCPP_INFO(this->get_logger(), "%s", full.c_str());
+    RCLCPP_INFO(this->get_logger(), "%s", gpgga.c_str());
   }
 
   // ---------------- Members ----------------
 
   rclcpp::Subscription<geographic_msgs::msg::GeoPoseWithCovarianceStamped>::SharedPtr gps_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr vel_sub_;
 
-  double lat_, lon_;
+  double lat_, lon_, alt_;
   double heading_deg_;
+  double vel_;
   bool has_fix_;
-
-  // UDP
-  int sock_;
-  struct sockaddr_in servaddr_;
-  std::string udp_ip_;
-  int udp_port_;
+  uint16_t sec_;
+  
 };
 
 // ---------------- Main ----------------

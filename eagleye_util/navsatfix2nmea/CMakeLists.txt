@@ -9,7 +9,10 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geographic_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 add_executable(navsatfix2nmea_node src/navsatfix2nmea_node.cpp)
 target_include_directories(navsatfix2nmea_node PUBLIC
@@ -21,6 +24,9 @@ ament_target_dependencies(
   "sensor_msgs"
   "geographic_msgs"
   "rclcpp"
+  "tf2"
+  "tf2_geometry_msgs"
+  "geometry_msgs"
 )
 
 install(TARGETS navsatfix2nmea_node
