@@ -10,6 +10,6 @@ if [ -z "$IP" ] || [ -z "$PORT" ]; then
     exit 1
 fi
 
-sleep 2
+sleep 1
 
 gpsd tcp://"$IP":"$PORT" -N -n

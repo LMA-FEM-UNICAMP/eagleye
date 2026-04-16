@@ -33,6 +33,7 @@ def generate_launch_description():
         package='navsatfix2nmea',
         executable='navsatfix2nmea_node',
         name='navsatfix2nmea',
+        parameters=[{"gpsd_port": local_gps_port}],
         output='both'
     )
     

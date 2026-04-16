@@ -23,8 +23,12 @@ class NMEAUdpPublisher : public rclcpp::Node
 {
 public:
   NMEAUdpPublisher()
-    : Node("nmea_udp_publisher"), lat_(0.0), lon_(0.0), heading_deg_(0.0), vel_(0.0), alt_(0.0), has_fix_(false)
+    : Node("nmea_udp_publisher"), lat_(0.0), lon_(0.0), alt_(0.0), heading_deg_(0.0), vel_(0.0), has_fix_(false)
   {
+
+    this->declare_parameter("gpsd_port", 5000);
+    int gpsd_port = this->get_parameter("gpsd_port").as_int();
+
     gps_sub_ = this->create_subscription<geographic_msgs::msg::GeoPoseWithCovarianceStamped>(
         "/eagleye/geo_pose_with_covariance", 10,
         std::bind(&NMEAUdpPublisher::gpsCallback, this, std::placeholders::_1));
@@ -33,19 +37,18 @@ public:
         "/eagleye/vehicle/twist", 10, std::bind(&NMEAUdpPublisher::velCallback, this, std::placeholders::_1));
 
     // TCP socket
+    int opt = 1;
     addrlen_ = sizeof(address_);
     server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd_ == 0)
     {
       perror("socket failed");
     }
-
-    int opt = 1;
     setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     address_.sin_family = AF_INET;
-    address_.sin_addr.s_addr = INADDR_ANY;
-    address_.sin_port = htons(PORT);
+    address_.sin_addr.s_addr = INADDR_ANY; //* All machine IPs
+    address_.sin_port = htons(gpsd_port);
 
     // Bind
     if (bind(server_fd_, (struct sockaddr*)&address_, sizeof(address_)) < 0)
@@ -54,7 +57,7 @@ public:
     }
 
     // Wait to connect to gpsd
-    RCLCPP_WARN(this->get_logger(), "Waiting gps at IP: XXX and PORT: XXX"); // TODO: Parameter-based IP and PORT
+    RCLCPP_WARN(this->get_logger(), "Waiting gps at IP: 127.0.0.1 and PORT: %d", gpsd_port);
     if (listen(server_fd_, BACKLOG) < 0)
     {
       perror("listen");
