@@ -2,7 +2,7 @@
 
 RESTART_DELAY=2
 
-source install/setup.bash       
+source /workspace/install/setup.bash
 
 while true; do
   ros2 launch navsatfix2nmea navsatfix2nmea.launch.py

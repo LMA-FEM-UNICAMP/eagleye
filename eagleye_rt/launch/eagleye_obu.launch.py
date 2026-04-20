@@ -40,18 +40,21 @@ def generate_launch_description():
          get_package_share_directory('eagleye_rt')),
          '/launch/socket_can_receiver.launch.py']))
     
-    navsat2nmea = Node(
-        package='navsatfix2nmea',
-        executable='navsatfix2nmea_node',
-        name='navsatfix2nmea',
-        parameters=[{'obu_ip': "127.0.0.1"},
-                    {'filtered_gnss_port': 5000}],
-        output='screen')
+    imu_launch = IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([os.path.join(
+         get_package_share_directory('xsens_mti_ros2_driver')),
+         '/launch/xsens_mti_node_lite.launch.py']))
+    
+    navsat2nmea = ExecuteProcess(
+      cmd=["/bin/bash", "-c", os.path.join(get_package_share_directory("navsatfix2nmea"), "scripts", "restart_launch.sh")],
+      output="screen"
+    )
     
     return LaunchDescription([
         eagleye_rt_launch,
         nmea_ros_driver_launch,
         socket_can_receiver_launch,
         eagleye_can_velocity_converter_launch,
-        navsat2nmea
+        navsat2nmea,
+        imu_launch
     ])
