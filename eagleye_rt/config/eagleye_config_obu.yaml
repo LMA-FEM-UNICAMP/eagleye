@@ -1,7 +1,7 @@
 /**:                                               #GNSS cycle 5Hz, IMU cycle 50Hz.
   ros__parameters:
     # Estimate mode
-    use_gnss_mode: RTKLIB
+    use_gnss_mode: nmea
     use_can_less_mode: false  
 
     # Topic
@@ -10,10 +10,10 @@
       twist_topic: /can_twist
     imu_topic: /imu/data
     gnss:
-      velocity_source_type: 3 # rtklib_msgs/RtklibNav: 0, nmea_msgs/Sentence: 1, ublox_msgs/NavPVT: 2, geometry_msgs/TwistWithCovarianceStamped: 3, septentrio_gnss_driver/PVTGeodetic: 4
-      velocity_source_topic:  /obu/velcov
-      llh_source_type: 2 # rtklib_msgs/RtklibNav: 0, nmea_msgs/Sentence: 1, sensor_msgs/NavSatFix: 2
-      llh_source_topic: /obu/fix
+      velocity_source_type: 1 # rtklib_msgs/RtklibNav: 0, nmea_msgs/Sentence: 1, ublox_msgs/NavPVT: 2, geometry_msgs/TwistWithCovarianceStamped: 3, septentrio_gnss_driver/PVTGeodetic: 4
+      velocity_source_topic:  /obu/nmea
+      llh_source_type: 1 # rtklib_msgs/RtklibNav: 0, nmea_msgs/Sentence: 1, sensor_msgs/NavSatFix: 2
+      llh_source_topic:  /obu/nmea
 
     # TF
     tf_gnss_frame:

@@ -110,10 +110,10 @@
             <param from="$(var config_path)"/>
             <param name="yaml_file" value="$(var config_path)"/>
     </node> -->
-    <!-- <node pkg="eagleye_rt" name="monitor" exec="monitor" output="screen">
+    <node pkg="eagleye_rt" name="monitor" exec="monitor" output="screen">
             <param from="$(var config_path)"/>
             <param name="yaml_file" value="$(var config_path)"/>
-    </node> -->
+    </node>
 
     <!-- RTK Options -->
     <!-- <node pkg="eagleye_rt" name="rtk_dead_reckoning" exec="rtk_dead_reckoning" if="$(var use_rtk_dead_reckoning)">

@@ -23,7 +23,7 @@ def generate_launch_description():
     eagleye_rt_launch = IncludeLaunchDescription(
       XMLLaunchDescriptionSource([os.path.join(
          get_package_share_directory('eagleye_rt')),
-         '/launch/eagleye_rt.launch.xml']))
+         '/launch/eagleye_rt_lite.launch.xml']))
     
     nmea_ros_driver_launch = IncludeLaunchDescription(
       PythonLaunchDescriptionSource([os.path.join(
