@@ -36,7 +36,7 @@
 rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pub;
 static geometry_msgs::msg::TwistStamped msg_velocity;
 
-static int can_id = 0x001;
+static int can_id = 0x123;
 static int start_bit = 0;
 static int length = 16;
 static double factor = 0.01;

@@ -1,6 +1,6 @@
 /**:  
   ros__parameters:
-    can_id: 0x001                #Set the CAN ID that includes the vehicle speed information.
+    can_id: 0x123               #Set the CAN ID that includes the vehicle speed information.
     start_bit: 0                 #Set the bit start position of vehicle speed information.(bit)
     length: 16                   #Set the data length.(bit)
     factor: 0.01                 #Set the factor so that the unit is km/h.
