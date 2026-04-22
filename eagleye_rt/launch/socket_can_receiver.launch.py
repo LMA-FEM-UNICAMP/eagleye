@@ -83,7 +83,7 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_can_fd', default_value='false'),
         DeclareLaunchArgument('interval_sec', default_value='0.01'),
         DeclareLaunchArgument('use_bus_time', default_value='false'),
-        DeclareLaunchArgument('filters', default_value='0:0',
+        DeclareLaunchArgument('filters', default_value='123:7FF',
                               description='Comma separated filters can be specified for each given'
                                           ' CAN interface.\n'
                                           '\t<can_id>:<can_mask>\n'

@@ -12,4 +12,4 @@ fi
 
 sleep 1
 
-gpsd tcp://"$IP":"$PORT" -N -n
+gpsd -N -n -G tcp://"$IP":"$PORT"
