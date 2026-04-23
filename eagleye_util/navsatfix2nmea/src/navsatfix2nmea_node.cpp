@@ -25,9 +25,10 @@ public:
   NMEAUdpPublisher()
     : Node("nmea_udp_publisher"), lat_(0.0), lon_(0.0), alt_(0.0), heading_deg_(0.0), vel_(0.0), has_fix_(false)
   {
-
     this->declare_parameter("gpsd_port", 5000);
     int gpsd_port = this->get_parameter("gpsd_port").as_int();
+    this->declare_parameter("nmea_rate", 10);
+    int nmea_rate_ms = (1 / this->get_parameter("nmea_rate").as_int()) * 1000;
 
     gps_sub_ = this->create_subscription<geographic_msgs::msg::GeoPoseWithCovarianceStamped>(
         "/eagleye/geo_pose_with_covariance", 10,
@@ -35,6 +36,9 @@ public:
 
     vel_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
         "/eagleye/vehicle/twist", 10, std::bind(&NMEAUdpPublisher::velCallback, this, std::placeholders::_1));
+
+    nmea_timer_ = this->create_wall_timer(std::chrono::milliseconds(nmea_rate_ms),
+                                          std::bind(&NMEAUdpPublisher::nmea_timer_callback, this));
 
     // TCP socket
     int opt = 1;
@@ -47,7 +51,7 @@ public:
     setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     address_.sin_family = AF_INET;
-    address_.sin_addr.s_addr = INADDR_ANY; //* All machine IPs
+    address_.sin_addr.s_addr = INADDR_ANY;  //* All machine IPs
     address_.sin_port = htons(gpsd_port);
 
     // Bind
@@ -74,6 +78,11 @@ public:
 private:
   // ---------------- Callbacks ----------------
 
+  void nmea_timer_callback()
+  {
+    publishNMEA();
+  }
+
   void velCallback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
   {
     vel_ = msg->twist.linear.x / 0.514444;
@@ -88,8 +97,6 @@ private:
     alt_ = msg->pose.pose.position.longitude;
 
     heading_deg_ = RAD2DEG(tf2::getYaw(msg->pose.pose.orientation));
-
-    publishNMEA();
   }
 
   // ---------------- Helpers ----------------
@@ -224,6 +231,7 @@ private:
 
   rclcpp::Subscription<geographic_msgs::msg::GeoPoseWithCovarianceStamped>::SharedPtr gps_sub_;
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr vel_sub_;
+  rclcpp::TimerBase::SharedPtr nmea_timer_;
 
   double lat_, lon_, alt_;
   double heading_deg_;
