@@ -40,7 +40,7 @@ def generate_launch_description():
                 "/launch/nmea_tcp.launch.py",
             ]
         ),
-        launch_arguments={"address": "192.168.140.7"}.items(), # ? DOes it overwrite the parameters in the yaml file?
+        launch_arguments={"address": "192.168.140.7"}.items(), # ? Does it overwrite the parameters in the yaml file?
     )
 
     eagleye_can_velocity_converter_launch = IncludeLaunchDescription(
@@ -78,10 +78,10 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # nmea_ros_driver_launch,
-            # socket_can_receiver_launch,
-            # eagleye_can_velocity_converter_launch,
-            # navsat2nmea,
+            nmea_ros_driver_launch,
+            socket_can_receiver_launch,
+            eagleye_can_velocity_converter_launch,
+            navsat2nmea,
             eagleye_rt_launch,
         ]
     )
