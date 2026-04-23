@@ -1,5 +1,5 @@
 # TODO:
-    
+
 #     - launch eagleye_rt
 #     - launch nmea_ros_driver
 #     - launch can_velocity_converter
@@ -19,36 +19,68 @@ from launch.actions import ExecuteProcess
 
 
 def generate_launch_description():
-    
+
+    # Params:
+    # <arg name="config_yaml" default="eagleye_config.yaml"/>
+    # config_yaml: eagleye_config_obu.yaml
     eagleye_rt_launch = IncludeLaunchDescription(
-      XMLLaunchDescriptionSource([os.path.join(
-         get_package_share_directory('eagleye_rt')),
-         '/launch/eagleye_rt_lite.launch.xml']))
-    
-    nmea_ros_driver_launch = IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([os.path.join(
-         get_package_share_directory('nmea_ros_bridge')),
-         '/launch/nmea_tcp.launch.py']))
-    
-    eagleye_can_velocity_converter_launch = IncludeLaunchDescription(
-      XMLLaunchDescriptionSource([os.path.join(
-         get_package_share_directory('eagleye_can_velocity_converter')),
-         '/launch/can_velocity_converter.xml']))
-    
-    socket_can_receiver_launch = IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([os.path.join(
-         get_package_share_directory('eagleye_rt')),
-         '/launch/socket_can_receiver.launch.py']))
-    
-    navsat2nmea = ExecuteProcess(
-      cmd=["/bin/bash", "-c", os.path.join(get_package_share_directory("navsatfix2nmea"), "scripts", "restart_launch.sh")],
-      output="screen"
+        XMLLaunchDescriptionSource(
+            [
+                os.path.join(get_package_share_directory("eagleye_rt")),
+                "/launch/eagleye_rt.launch.xml",
+            ]
+        ),
+        launch_arguments={"config_yaml": "eagleye_config_obu.yaml"}.items(),
     )
-    
-    return LaunchDescription([
-        eagleye_rt_launch,
-        nmea_ros_driver_launch,
-        socket_can_receiver_launch,
-        eagleye_can_velocity_converter_launch,
-        navsat2nmea
-    ])
+
+    nmea_ros_driver_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                os.path.join(get_package_share_directory("nmea_ros_bridge")),
+                "/launch/nmea_tcp.launch.py",
+            ]
+        )
+    )
+
+    eagleye_can_velocity_converter_launch = IncludeLaunchDescription(
+        XMLLaunchDescriptionSource(
+            [
+                os.path.join(
+                    get_package_share_directory("eagleye_can_velocity_converter")
+                ),
+                "/launch/can_velocity_converter.xml",
+            ]
+        )
+    )
+
+    socket_can_receiver_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                os.path.join(get_package_share_directory("eagleye_rt")),
+                "/launch/socket_can_receiver.launch.py",
+            ]
+        )
+    )
+
+    navsat2nmea = ExecuteProcess(
+        cmd=[
+            "/bin/bash",
+            "-c",
+            os.path.join(
+                get_package_share_directory("navsatfix2nmea"),
+                "scripts",
+                "restart_launch.sh",
+            ),
+        ],
+        output="screen",
+    )
+
+    return LaunchDescription(
+        [
+            nmea_ros_driver_launch,
+            socket_can_receiver_launch,
+            eagleye_can_velocity_converter_launch,
+            navsat2nmea,
+            eagleye_rt_launch,
+        ]
+    )
