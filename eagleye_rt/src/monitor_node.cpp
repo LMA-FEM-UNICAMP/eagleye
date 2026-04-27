@@ -861,7 +861,7 @@ void printStatus(void)
   std::cout << std::endl;
 
   std::cout << "--- \033[1;34m heading\033[m ---------------------------------"<< std::endl;
-  std::cout<<"\033[1m heading \033[m "<<std::setprecision(6)<<_heading_interpolate_3rd.heading_angle<<" [rad/s]"<<std::endl;
+  std::cout<<"\033[1m heading \033[m "<<std::setprecision(6)<<_heading_interpolate_3rd.heading_angle<<" [rad]"<<std::endl;
   std::cout<< "\033[1m status enable \033[m "<<(_heading_interpolate_3rd.status.enabled_status ? "\033[1;32mTrue\033[m" : "\033[1;31mFalse\033[m")<<std::endl;
   std::cout << std::endl;
 

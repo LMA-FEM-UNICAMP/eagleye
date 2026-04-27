@@ -27,16 +27,16 @@
       z : 0.0
       use_ecef_base_position : false
 
-    reverse_imu_wz: false
+    reverse_imu_wz: true
 
     # Eagleye Navigation Parameters
     # Basic Navigation Functions
     common:
       imu_rate: 50
-      gnss_rate: 5
+      gnss_rate: 10
       stop_judgment_threshold: 0.01
       slow_judgment_threshold: 0.278
-      moving_judgment_threshold: 2.78
+      moving_judgment_threshold: 1.95 # 7 km/h
       
     velocity_scale_factor:                                
       estimated_minimum_interval: 20
@@ -45,7 +45,7 @@
       velocity_scale_factor_save_str: /config/velocity_scale_factor.txt
       save_velocity_scale_factor: false                    
       velocity_scale_factor_save_duration: 100.0 
-      th_velocity_scale_factor_percent: 10.0          
+      th_velocity_scale_factor_percent: 25.0          
 
     yaw_rate_offset_stop:                                  
       estimated_interval: 4
@@ -111,9 +111,9 @@
     position:
       estimated_interval: 300
       update_distance: 0.1
-      outlier_threshold: 3.0
-      gnss_receiving_threshold: 0.25
-      outlier_ratio_threshold: 0.5
+      outlier_threshold: 15.0 # era 3.0
+      gnss_receiving_threshold: 0.1
+      outlier_ratio_threshold: 0.1
 
     position_interpolate:
       sync_search_period: 2

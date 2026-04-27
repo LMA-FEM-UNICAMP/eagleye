@@ -38,7 +38,6 @@ static eagleye_msgs::msg::Height height;
 static eagleye_msgs::msg::Position gnss_smooth_pos;
 static nmea_msgs::msg::Gpgga gga;
 
-
 static eagleye_msgs::msg::Position enu_absolute_pos_interpolate;
 static sensor_msgs::msg::NavSatFix eagleye_fix;
 rclcpp::Publisher<eagleye_msgs::msg::Position>::SharedPtr pub1;
@@ -77,7 +76,8 @@ void enu_vel_callback(const geometry_msgs::msg::Vector3Stamped::ConstSharedPtr m
   enu_absolute_pos_interpolate.header.frame_id = "base_link";
   eagleye_fix.header = msg->header;
   eagleye_fix.header.frame_id = "gnss";
-  position_interpolate_estimate(enu_absolute_pos,enu_vel,gnss_smooth_pos,height,position_interpolate_parameter,&position_interpolate_status,&enu_absolute_pos_interpolate,&eagleye_fix);
+  position_interpolate_estimate(enu_absolute_pos, enu_vel, gnss_smooth_pos, height, position_interpolate_parameter,
+                                &position_interpolate_status, &enu_absolute_pos_interpolate, &eagleye_fix);
   if (enu_absolute_pos.status.enabled_status == true)
   {
     pub1->publish(enu_absolute_pos_interpolate);
@@ -86,9 +86,23 @@ void enu_vel_callback(const geometry_msgs::msg::Vector3Stamped::ConstSharedPtr m
   else if (gga_time != 0)
   {
     sensor_msgs::msg::NavSatFix fix;
+    if (gga.lat_dir == "N")
+    {
+      fix.latitude = gga.lat;
+    }
+    else if (gga.lat_dir == "S")
+    {
+      fix.latitude = -gga.lat;
+    }
+    if (gga.lon_dir == "E")
+    {
+      fix.longitude = gga.lon;
+    }
+    else if (gga.lon_dir == "W")
+    {
+      fix.longitude = -gga.lon;
+    }
     fix.header = gga.header;
-    fix.latitude = gga.lat;
-    fix.longitude = gga.lon;
     fix.altitude = gga.alt + gga.undulation;
     pub2->publish(fix);
   }
@@ -102,8 +116,8 @@ int main(int argc, char** argv)
   std::string subscribe_gga_topic_name = "gnss/gga";
 
   std::string yaml_file;
-  node->declare_parameter("yaml_file",yaml_file);
-  node->get_parameter("yaml_file",yaml_file);
+  node->declare_parameter("yaml_file", yaml_file);
+  node->get_parameter("yaml_file", yaml_file);
   std::cout << "yaml_file: " << yaml_file << std::endl;
 
   try
@@ -111,8 +125,10 @@ int main(int argc, char** argv)
     YAML::Node conf = YAML::LoadFile(yaml_file);
 
     position_interpolate_parameter.imu_rate = conf["/**"]["ros__parameters"]["common"]["imu_rate"].as<double>();
-    position_interpolate_parameter.stop_judgment_threshold = conf["/**"]["ros__parameters"]["common"]["stop_judgment_threshold"].as<double>();
-    position_interpolate_parameter.sync_search_period = conf["/**"]["ros__parameters"]["position_interpolate"]["sync_search_period"].as<double>();
+    position_interpolate_parameter.stop_judgment_threshold =
+        conf["/**"]["ros__parameters"]["common"]["stop_judgment_threshold"].as<double>();
+    position_interpolate_parameter.sync_search_period =
+        conf["/**"]["ros__parameters"]["position_interpolate"]["sync_search_period"].as<double>();
 
     std::cout << "imu_rate " << position_interpolate_parameter.imu_rate << std::endl;
     std::cout << "stop_judgment_threshold " << position_interpolate_parameter.stop_judgment_threshold << std::endl;
@@ -124,12 +140,16 @@ int main(int argc, char** argv)
     exit(3);
   }
 
-
-  auto sub1 = node->create_subscription<geometry_msgs::msg::Vector3Stamped>("enu_vel", rclcpp::QoS(10), enu_vel_callback); //ros::TransportHints().tcpNoDelay()
-  auto sub2 = node->create_subscription<eagleye_msgs::msg::Position>("enu_absolute_pos", rclcpp::QoS(10), enu_absolute_pos_callback); //ros::TransportHints().tcpNoDelay()
-  auto sub3 = node->create_subscription<eagleye_msgs::msg::Position>("gnss_smooth_pos_enu", rclcpp::QoS(10), gnss_smooth_pos_enu_callback); //ros::TransportHints().tcpNoDelay()
-  auto sub4 = node->create_subscription<eagleye_msgs::msg::Height>("height", rclcpp::QoS(10), height_callback); //ros::TransportHints().tcpNoDelay()
-  auto sub5 = node->create_subscription<nmea_msgs::msg::Gpgga>(subscribe_gga_topic_name, rclcpp::QoS(10), gga_callback); //ros::TransportHints().tcpNoDelay()
+  auto sub1 = node->create_subscription<geometry_msgs::msg::Vector3Stamped>(
+      "enu_vel", rclcpp::QoS(10), enu_vel_callback);  // ros::TransportHints().tcpNoDelay()
+  auto sub2 = node->create_subscription<eagleye_msgs::msg::Position>(
+      "enu_absolute_pos", rclcpp::QoS(10), enu_absolute_pos_callback);  // ros::TransportHints().tcpNoDelay()
+  auto sub3 = node->create_subscription<eagleye_msgs::msg::Position>(
+      "gnss_smooth_pos_enu", rclcpp::QoS(10), gnss_smooth_pos_enu_callback);  // ros::TransportHints().tcpNoDelay()
+  auto sub4 = node->create_subscription<eagleye_msgs::msg::Height>(
+      "height", rclcpp::QoS(10), height_callback);  // ros::TransportHints().tcpNoDelay()
+  auto sub5 = node->create_subscription<nmea_msgs::msg::Gpgga>(subscribe_gga_topic_name, rclcpp::QoS(10),
+                                                               gga_callback);  // ros::TransportHints().tcpNoDelay()
   pub1 = node->create_publisher<eagleye_msgs::msg::Position>("enu_absolute_pos_interpolate", rclcpp::QoS(10));
   pub2 = node->create_publisher<sensor_msgs::msg::NavSatFix>("fix", rclcpp::QoS(10));
 

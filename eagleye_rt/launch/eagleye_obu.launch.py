@@ -78,10 +78,10 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            nmea_ros_driver_launch,
-            socket_can_receiver_launch,
-            eagleye_can_velocity_converter_launch,
-            navsat2nmea,
+            # nmea_ros_driver_launch,
+            # socket_can_receiver_launch,
+            # eagleye_can_velocity_converter_launch,
+            # navsat2nmea,
             eagleye_rt_launch,
         ]
     )

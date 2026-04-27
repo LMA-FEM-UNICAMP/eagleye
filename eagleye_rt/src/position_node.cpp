@@ -148,6 +148,10 @@ void enu_vel_callback(const geometry_msgs::msg::Vector3Stamped::ConstSharedPtr m
   {
     pub->publish(enu_absolute_pos);
   }
+  else
+  {
+    RCLCPP_WARN(rclcpp::get_logger(node_name), "enu_absolute_pos publishin skipped");
+  }
   enu_absolute_pos.status.estimate_status = false;
 }
 
