@@ -111,9 +111,9 @@
     position:
       estimated_interval: 300
       update_distance: 0.1
-      outlier_threshold: 15.0 # era 3.0
-      gnss_receiving_threshold: 0.1
-      outlier_ratio_threshold: 0.1
+      outlier_threshold: 3.0
+      gnss_receiving_threshold: 0.25
+      outlier_ratio_threshold: 0.5
 
     position_interpolate:
       sync_search_period: 2
